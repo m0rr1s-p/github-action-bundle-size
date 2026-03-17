@@ -38,6 +38,11 @@ export async function run(): Promise<void> {
     core.setOutput('base-js-gz', fmt(baseJS.gz))
     core.setOutput('base-css-gz', fmt(baseCSS.gz))
 
+    core.setOutput('delta-js', delta(baseJS.raw, currentJS.raw))
+    core.setOutput('delta-css', delta(baseCSS.raw, currentCSS.raw))
+    core.setOutput('delta-js-gz', delta(baseJS.gz, currentJS.gz))
+    core.setOutput('delta-css-gz', delta(baseCSS.gz, currentCSS.gz))
+
     // Fill the summary table
     tableData.push([
       { data: 'JS(raw)', header: false },
@@ -77,6 +82,7 @@ export async function run(): Promise<void> {
     ])
     core.summary.addTable(tableData)
     core.summary.write()
+    core.setOutput('summary', tableData)
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)

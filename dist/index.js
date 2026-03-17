@@ -28372,6 +28372,10 @@ async function run() {
         setOutput('base-css', fmt(baseCSS.raw));
         setOutput('base-js-gz', fmt(baseJS.gz));
         setOutput('base-css-gz', fmt(baseCSS.gz));
+        setOutput('delta-js', delta(baseJS.raw, currentJS.raw));
+        setOutput('delta-css', delta(baseCSS.raw, currentCSS.raw));
+        setOutput('delta-js-gz', delta(baseJS.gz, currentJS.gz));
+        setOutput('delta-css-gz', delta(baseCSS.gz, currentCSS.gz));
         // Fill the summary table
         tableData.push([
             { data: 'JS(raw)', header: false },
@@ -28411,6 +28415,7 @@ async function run() {
         ]);
         summary.addTable(tableData);
         summary.write();
+        setOutput('summary', tableData);
     }
     catch (error) {
         // Fail the workflow run if an error occurs

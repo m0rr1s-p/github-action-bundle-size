@@ -15,6 +15,10 @@ inputs:
   current-path:
     description: The current ref to compare against.
     required: false
+  comment:
+    description: The comment to post.
+    required: false
+    default: 'false'
 
 # Define your outputs here.
 outputs:
@@ -26,6 +30,24 @@ outputs:
     description: The current js gzipped.
   current-css-gz:
     description: The current css gzipped.
+  base-js:
+    description: The base js.
+  base-css:
+    description: The base css.
+  base-js-gz:
+    description: The base js gzipped.
+  base-css-gz:
+    description: The base css gzipped.
+  diff-js:
+    description: The diff js.
+  diff-css:
+    description: The diff css.
+  diff-js-gz:
+    description: The diff js gzipped.
+  diff-css-gz:
+    description: The diff css gzipped.
+  summary:
+    description: The summary table data.
 
 runs:
   using: node24
