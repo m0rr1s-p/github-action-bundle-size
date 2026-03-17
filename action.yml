@@ -15,7 +15,7 @@ inputs:
   current-path:
     description: The current ref to compare against.
     required: false
-  comment:
+  create-comment:
     description: The comment to post.
     required: false
     default: 'false'
@@ -46,7 +46,8 @@ outputs:
     description: The diff js gzipped.
   diff-css-gz:
     description: The diff css gzipped.
-
+  comment:
+    description: The comment.
 
 runs:
   using: node24

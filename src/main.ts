@@ -82,7 +82,10 @@ export async function run(): Promise<void> {
     ])
     core.summary.addTable(tableData)
     core.summary.write()
-    core.setOutput('summary', tableData)
+    if (core.getInput('create-comment') === 'true') {
+      const comment = core.summary.stringify()
+      core.setOutput('comment', comment)
+    }
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)

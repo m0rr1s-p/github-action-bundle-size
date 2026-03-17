@@ -70,6 +70,7 @@ jobs:
         id: test-action
         uses: ./
         with:
+          create-comment: true
           base-path: base/__tests__/mocks
           current-path: current/__tests__/mocks
 
@@ -87,7 +88,4 @@ jobs:
           echo "Diff JS(gz): ${{ steps.test-action.outputs.diff-js-gz }}"
           echo "Diff CSS: ${{ steps.test-action.outputs.diff-css }}"
           echo "Diff CSS(gz): ${{ steps.test-action.outputs.diff-css-gz }}"
-
-      - name: Print summary
-        run: |
-          echo $GITHUB_STEP_SUMMARY
+          echo "Comment: ${{ steps.test-action.outputs.comment }}"

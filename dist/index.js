@@ -28415,7 +28415,10 @@ async function run() {
         ]);
         summary.addTable(tableData);
         summary.write();
-        setOutput('summary', tableData);
+        if (getInput('create-comment') === 'true') {
+            const comment = summary.stringify();
+            setOutput('comment', comment);
+        }
     }
     catch (error) {
         // Fail the workflow run if an error occurs
