@@ -43,7 +43,6 @@ export function checkBuildDir(buildDir: string) {
 // const js = measure('.js')
 // const css = measure('.css')
 
-// const fmt = (bytes: number) => (bytes / 1048576).toFixed(2) + ' MB'
 //
 // const args = process.argv.slice(2).filter((a) => a !== '--')
 // const mode = args[0]
