@@ -12,9 +12,11 @@ export async function run(): Promise<void> {
     const basePath: string = core.getInput('base-path')
     const fmt = (bytes: number) => (bytes / 1048576).toFixed(2) + ' MB'
     const tableData = [
-      { data: 'Asset', header: true },
-      { data: 'Base', header: true },
-      { data: 'PR', header: true }
+      [
+        { data: 'Asset', header: true },
+        { data: 'Base', header: true },
+        { data: 'PR', header: true }
+      ]
     ]
 
     // Compute current bundle size
@@ -36,27 +38,27 @@ export async function run(): Promise<void> {
     core.setOutput('base-css-gz', fmt(baseCSS.gz))
 
     // Fill the summary table
-    tableData.push(
+    tableData.push([
       { data: 'JS(raw)', header: false },
       { data: fmt(baseJS.raw), header: false },
       { data: fmt(currentJS.raw), header: false }
-    )
-    tableData.push(
+    ])
+    tableData.push([
       { data: 'JS(gzip)', header: false },
       { data: fmt(baseJS.gz), header: false },
       { data: fmt(currentJS.gz), header: false }
-    )
-    tableData.push(
+    ])
+    tableData.push([
       { data: 'CSS(raw)', header: false },
       { data: fmt(baseCSS.raw), header: false },
       { data: fmt(currentCSS.raw), header: false }
-    )
-    tableData.push(
+    ])
+    tableData.push([
       { data: 'CSS(gzip)', header: false },
       { data: fmt(baseCSS.gz), header: false },
       { data: fmt(currentCSS.gz), header: false }
-    )
-    core.summary.addTable([tableData])
+    ])
+    core.summary.addTable(tableData)
     core.summary.write()
   } catch (error) {
     // Fail the workflow run if an error occurs
