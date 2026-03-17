@@ -28413,6 +28413,7 @@ async function run() {
                 header: false
             }
         ]);
+        summary.addHeading('Bundle Size');
         summary.addTable(tableData);
         summary.write();
         if (getInput('create-comment') === 'true') {

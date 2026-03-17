@@ -80,6 +80,7 @@ export async function run(): Promise<void> {
         header: false
       }
     ])
+    core.summary.addHeading('Bundle Size')
     core.summary.addTable(tableData)
     core.summary.write()
     if (core.getInput('create-comment') === 'true') {
