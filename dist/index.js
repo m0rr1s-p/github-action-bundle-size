@@ -28378,7 +28378,7 @@ async function run() {
         setOutput('delta-css-gz', delta(baseCSS.gz, currentCSS.gz));
         // Fill the summary table
         tableData.push([
-            { data: 'JS(raw)', header: false },
+            { data: 'JS (raw)', header: false },
             { data: fmt(baseJS.raw), header: false },
             { data: fmt(currentJS.raw), header: false },
             {
@@ -28387,7 +28387,7 @@ async function run() {
             }
         ]);
         tableData.push([
-            { data: 'JS(gzip)', header: false },
+            { data: 'JS (gzip)', header: false },
             { data: fmt(baseJS.gz), header: false },
             { data: fmt(currentJS.gz), header: false },
             {
@@ -28396,7 +28396,7 @@ async function run() {
             }
         ]);
         tableData.push([
-            { data: 'CSS(raw)', header: false },
+            { data: 'CSS (raw)', header: false },
             { data: fmt(baseCSS.raw), header: false },
             { data: fmt(currentCSS.raw), header: false },
             {
@@ -28405,7 +28405,7 @@ async function run() {
             }
         ]);
         tableData.push([
-            { data: 'CSS(gzip)', header: false },
+            { data: 'CSS (gzip)', header: false },
             { data: fmt(baseCSS.gz), header: false },
             { data: fmt(currentCSS.gz), header: false },
             {
