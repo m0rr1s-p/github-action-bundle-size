@@ -28353,6 +28353,7 @@ async function run() {
         tableData.push({ data: 'CSS(raw)', header: false }, { data: fmt(baseCSS.raw), header: false }, { data: fmt(currentCSS.raw), header: false });
         tableData.push({ data: 'CSS(gzip)', header: false }, { data: fmt(baseCSS.gz), header: false }, { data: fmt(currentCSS.gz), header: false });
         summary.addTable([tableData]);
+        summary.write();
     }
     catch (error) {
         // Fail the workflow run if an error occurs

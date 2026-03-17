@@ -57,6 +57,7 @@ export async function run(): Promise<void> {
       { data: fmt(currentCSS.gz), header: false }
     )
     core.summary.addTable([tableData])
+    core.summary.write()
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)
