@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import { measure, checkBuildDir } from './bundle-size.js'
+import { measure, checkBuildDir, delta, percent } from './bundle-size.js'
 
 /**
  * The main function for the action.
@@ -15,7 +15,8 @@ export async function run(): Promise<void> {
       [
         { data: 'Asset', header: true },
         { data: 'Base', header: true },
-        { data: 'PR', header: true }
+        { data: 'PR', header: true },
+        { data: 'Delta', header: true }
       ]
     ]
 
@@ -41,22 +42,38 @@ export async function run(): Promise<void> {
     tableData.push([
       { data: 'JS(raw)', header: false },
       { data: fmt(baseJS.raw), header: false },
-      { data: fmt(currentJS.raw), header: false }
+      { data: fmt(currentJS.raw), header: false },
+      {
+        data: `${delta(baseJS.raw, currentJS.raw)}(${percent(baseJS.raw, currentJS.raw)})`,
+        header: false
+      }
     ])
     tableData.push([
       { data: 'JS(gzip)', header: false },
       { data: fmt(baseJS.gz), header: false },
-      { data: fmt(currentJS.gz), header: false }
+      { data: fmt(currentJS.gz), header: false },
+      {
+        data: `${delta(baseJS.gz, currentJS.gz)}(${percent(baseJS.gz, currentJS.gz)})`,
+        header: false
+      }
     ])
     tableData.push([
       { data: 'CSS(raw)', header: false },
       { data: fmt(baseCSS.raw), header: false },
-      { data: fmt(currentCSS.raw), header: false }
+      { data: fmt(currentCSS.raw), header: false },
+      {
+        data: `${delta(baseCSS.raw, currentCSS.raw)}(${percent(baseCSS.raw, currentCSS.raw)})`,
+        header: false
+      }
     ])
     tableData.push([
       { data: 'CSS(gzip)', header: false },
       { data: fmt(baseCSS.gz), header: false },
-      { data: fmt(currentCSS.gz), header: false }
+      { data: fmt(currentCSS.gz), header: false },
+      {
+        data: `${delta(baseCSS.gz, currentCSS.gz)}(${percent(baseCSS.gz, currentCSS.gz)})`,
+        header: false
+      }
     ])
     core.summary.addTable(tableData)
     core.summary.write()

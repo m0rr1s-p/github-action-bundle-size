@@ -7,7 +7,7 @@ import { gzipSync } from 'node:zlib'
 // TODO: once preepic merges to main, both branches will have the script —
 //       switch back to import.meta.dirname and use `pnpm lint:bundle-size:ci` for both.
 // const BUILD_DIR = join(process.cwd(), '../resources/assets/svelte/build')
-
+const fmt = (bytes: number) => (bytes / 1048576).toFixed(2) + ' MB'
 function collectFiles(dir: string, ext: string): string[] {
   const results: string[] = []
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -37,6 +37,26 @@ export function checkBuildDir(buildDir: string) {
       `Build directory not found: ${buildDir}\nRun 'pnpm build' first.`
     )
     process.exit(1)
+  }
+}
+
+export function delta(base: number, pr: number) {
+  const diff = pr - base
+  if (diff === 0) {
+    return '--'
+  } else if (diff > 0) {
+    return `+${fmt(diff)}`
+  } else {
+    return `-${fmt(diff)}`
+  }
+}
+
+export function percent(base: number, pr: number) {
+  const diff = pr - base
+  if (diff === 0) {
+    return '0%'
+  } else {
+    return `${((diff / base) * 100).toFixed(1)}%`
   }
 }
 

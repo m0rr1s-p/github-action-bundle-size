@@ -28269,6 +28269,7 @@ function error(message, properties = {}) {
 // TODO: once preepic merges to main, both branches will have the script —
 //       switch back to import.meta.dirname and use `pnpm lint:bundle-size:ci` for both.
 // const BUILD_DIR = join(process.cwd(), '../resources/assets/svelte/build')
+const fmt = (bytes) => (bytes / 1048576).toFixed(2) + ' MB';
 function collectFiles(dir, ext) {
     const results = [];
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -28296,6 +28297,27 @@ function checkBuildDir(buildDir) {
     catch {
         console.error(`Build directory not found: ${buildDir}\nRun 'pnpm build' first.`);
         process.exit(1);
+    }
+}
+function delta(base, pr) {
+    const diff = pr - base;
+    if (diff === 0) {
+        return '--';
+    }
+    else if (diff > 0) {
+        return `+${fmt(diff)}`;
+    }
+    else {
+        return `-${fmt(diff)}`;
+    }
+}
+function percent(base, pr) {
+    const diff = pr - base;
+    if (diff === 0) {
+        return '0%';
+    }
+    else {
+        return `${((diff / base) * 100).toFixed(1)}%`;
     }
 }
 // const js = measure('.js')
@@ -28330,7 +28352,8 @@ async function run() {
             [
                 { data: 'Asset', header: true },
                 { data: 'Base', header: true },
-                { data: 'PR', header: true }
+                { data: 'PR', header: true },
+                { data: 'Delta', header: true }
             ]
         ];
         // Compute current bundle size
@@ -28353,22 +28376,38 @@ async function run() {
         tableData.push([
             { data: 'JS(raw)', header: false },
             { data: fmt(baseJS.raw), header: false },
-            { data: fmt(currentJS.raw), header: false }
+            { data: fmt(currentJS.raw), header: false },
+            {
+                data: `${delta(baseJS.raw, currentJS.raw)}(${percent(baseJS.raw, currentJS.raw)})`,
+                header: false
+            }
         ]);
         tableData.push([
             { data: 'JS(gzip)', header: false },
             { data: fmt(baseJS.gz), header: false },
-            { data: fmt(currentJS.gz), header: false }
+            { data: fmt(currentJS.gz), header: false },
+            {
+                data: `${delta(baseJS.gz, currentJS.gz)}(${percent(baseJS.gz, currentJS.gz)})`,
+                header: false
+            }
         ]);
         tableData.push([
             { data: 'CSS(raw)', header: false },
             { data: fmt(baseCSS.raw), header: false },
-            { data: fmt(currentCSS.raw), header: false }
+            { data: fmt(currentCSS.raw), header: false },
+            {
+                data: `${delta(baseCSS.raw, currentCSS.raw)}(${percent(baseCSS.raw, currentCSS.raw)})`,
+                header: false
+            }
         ]);
         tableData.push([
             { data: 'CSS(gzip)', header: false },
             { data: fmt(baseCSS.gz), header: false },
-            { data: fmt(currentCSS.gz), header: false }
+            { data: fmt(currentCSS.gz), header: false },
+            {
+                data: `${delta(baseCSS.gz, currentCSS.gz)}(${percent(baseCSS.gz, currentCSS.gz)})`,
+                header: false
+            }
         ]);
         summary.addTable(tableData);
         summary.write();
