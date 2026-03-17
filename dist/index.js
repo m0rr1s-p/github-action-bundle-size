@@ -21,7 +21,7 @@ import require$$7 from 'node:querystring';
 import require$$8 from 'node:events';
 import require$$0$5 from 'node:diagnostics_channel';
 import require$$5 from 'node:tls';
-import require$$1$2 from 'node:zlib';
+import require$$1$2, { gzipSync } from 'node:zlib';
 import require$$5$1 from 'node:perf_hooks';
 import require$$8$1 from 'node:util/types';
 import require$$1$1 from 'node:worker_threads';
@@ -32,6 +32,8 @@ import require$$1$5 from 'node:dns';
 import require$$5$3 from 'string_decoder';
 import 'child_process';
 import 'timers';
+import { statSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -27992,13 +27994,6 @@ function setFailed(message) {
     error(message);
 }
 /**
- * Writes debug message to user log
- * @param message debug message
- */
-function debug(message) {
-    issueCommand('debug', {}, message);
-}
-/**
  * Adds an error issue
  * @param message error issue message. Errors will be converted to string via toString()
  * @param properties optional properties to add to the annotation.
@@ -28007,19 +28002,58 @@ function error(message, properties = {}) {
     issueCommand('error', toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
 
-/**
- * Waits for a number of milliseconds.
- *
- * @param milliseconds The number of milliseconds to wait.
- * @returns Resolves with 'done!' after the wait is over.
- */
-async function wait(milliseconds) {
-    return new Promise((resolve) => {
-        if (isNaN(milliseconds))
-            throw new Error('milliseconds is not a number');
-        setTimeout(() => resolve('done!'), milliseconds);
-    });
+// uses cwd() instead of import.meta.dirname so the CI workflow can copy this
+// script to /tmp and run it against the base branch (where the file doesn't exist).
+// TODO: once preepic merges to main, both branches will have the script —
+//       switch back to import.meta.dirname and use `pnpm lint:bundle-size:ci` for both.
+// const BUILD_DIR = join(process.cwd(), '../resources/assets/svelte/build')
+function collectFiles(dir, ext) {
+    const results = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+            results.push(...collectFiles(full, ext));
+        }
+        else if (entry.name.endsWith(ext) && !entry.name.endsWith('.map')) {
+            results.push(full);
+        }
+    }
+    return results;
 }
+function measure(buildDir, ext) {
+    const files = collectFiles(buildDir, ext);
+    const raw = files.reduce((sum, f) => sum + statSync(f).size, 0);
+    const buf = Buffer.concat(files.map((f) => readFileSync(f)));
+    const gz = gzipSync(buf, { level: 9 }).length;
+    return { raw, gz };
+}
+function checkBuildDir(buildDir) {
+    try {
+        statSync(buildDir);
+    }
+    catch {
+        console.error(`Build directory not found: ${buildDir}\nRun 'pnpm build' first.`);
+        process.exit(1);
+    }
+}
+// const js = measure('.js')
+// const css = measure('.css')
+// const fmt = (bytes: number) => (bytes / 1048576).toFixed(2) + ' MB'
+//
+// const args = process.argv.slice(2).filter((a) => a !== '--')
+// const mode = args[0]
+// if (mode === '--env') {
+//   const prefix = args[1] || 'BUNDLE'
+//   console.log(`${prefix}_JS=${js.raw}`)
+//   console.log(`${prefix}_CSS=${css.raw}`)
+//   console.log(`${prefix}_JS_GZ=${js.gz}`)
+//   console.log(`${prefix}_CSS_GZ=${css.gz}`)
+// } else {
+//   console.log('Bundle Size')
+//   console.log('')
+//   console.log(`  JS   ${fmt(js.raw)}  (gzip: ${fmt(js.gz)})`)
+//   console.log(`  CSS  ${fmt(css.raw)}  (gzip: ${fmt(css.gz)})`)
+// }
 
 /**
  * The main function for the action.
@@ -28028,15 +28062,24 @@ async function wait(milliseconds) {
  */
 async function run() {
     try {
-        const ms = getInput('milliseconds');
-        // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-        debug(`Waiting ${ms} milliseconds ...`);
-        // Log the current timestamp, wait, then log the new timestamp
-        debug(new Date().toTimeString());
-        await wait(parseInt(ms, 10));
-        debug(new Date().toTimeString());
-        // Set outputs for other workflow steps to use
-        setOutput('time', new Date().toTimeString());
+        const currentPath = getInput('current-path') || process.cwd();
+        const basePath = getInput('base-path');
+        // Compute current bundle size
+        checkBuildDir(currentPath);
+        const currentJS = measure(currentPath, '.js');
+        const currentCSS = measure(currentPath, '.css');
+        setOutput('current-js', currentJS.raw);
+        setOutput('current-css', currentCSS.raw);
+        setOutput('current-js-gz', currentJS.gz);
+        setOutput('current-css-gz', currentCSS.gz);
+        // Compute base bundle size
+        checkBuildDir(basePath);
+        const baseJS = measure(basePath, '.js');
+        const baseCSS = measure(basePath, '.css');
+        setOutput('base-js', baseJS.raw);
+        setOutput('base-css', baseCSS.raw);
+        setOutput('base-js-gz', baseJS.gz);
+        setOutput('base-css-gz', baseCSS.gz);
     }
     catch (error) {
         // Fail the workflow run if an error occurs

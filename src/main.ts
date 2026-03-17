@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import { wait } from './wait.js'
+import { measure, checkBuildDir } from './bundle-size.js'
 
 /**
  * The main function for the action.
@@ -8,18 +8,26 @@ import { wait } from './wait.js'
  */
 export async function run(): Promise<void> {
   try {
-    const ms: string = core.getInput('milliseconds')
+    const currentPath: string = core.getInput('current-path') || process.cwd()
+    const basePath: string = core.getInput('base-path')
 
-    // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-    core.debug(`Waiting ${ms} milliseconds ...`)
+    // Compute current bundle size
+    checkBuildDir(currentPath)
+    const currentJS = measure(currentPath, '.js')
+    const currentCSS = measure(currentPath, '.css')
+    core.setOutput('current-js', currentJS.raw)
+    core.setOutput('current-css', currentCSS.raw)
+    core.setOutput('current-js-gz', currentJS.gz)
+    core.setOutput('current-css-gz', currentCSS.gz)
 
-    // Log the current timestamp, wait, then log the new timestamp
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
-
-    // Set outputs for other workflow steps to use
-    core.setOutput('time', new Date().toTimeString())
+    // Compute base bundle size
+    checkBuildDir(basePath)
+    const baseJS = measure(basePath, '.js')
+    const baseCSS = measure(basePath, '.css')
+    core.setOutput('base-js', baseJS.raw)
+    core.setOutput('base-css', baseCSS.raw)
+    core.setOutput('base-js-gz', baseJS.gz)
+    core.setOutput('base-css-gz', baseCSS.gz)
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)

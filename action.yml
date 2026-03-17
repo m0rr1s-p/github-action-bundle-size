@@ -9,15 +9,23 @@ branding:
 
 # Define your inputs here.
 inputs:
-  milliseconds:
-    description: Your input description here
-    required: true
-    default: '1000'
+  base-path:
+    description: The base ref to compare against.
+    required: false
+  current-path:
+    description: The current ref to compare against.
+    required: false
 
 # Define your outputs here.
 outputs:
-  time:
-    description: Your output description here
+  current-js:
+    description: The current js.
+  current-css:
+    description: The current css.
+  current-js-gz:
+    description: The current js gzipped.
+  current-css-gz:
+    description: The current css gzipped.
 
 runs:
   using: node24

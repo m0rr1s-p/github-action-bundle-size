@@ -49,16 +49,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        id: checkout
+      - name: Checkout Current
+        id: checkout_current
         uses: actions/checkout@v6
+        with:
+          path: current
+
+      - name: Checkout Base
+        id: checkout_base
+        uses: actions/checkout@v6
+        with:
+          path: base
 
       - name: Test Local Action
         id: test-action
         uses: ./
         with:
-          milliseconds: 2000
+          base-path: base/__tests__/mocks
+          current-path: current/__tests__/mocks
 
       - name: Print Output
-        id: output
-        run: echo "${{ steps.test-action.outputs.time }}"
+        run: |
+          echo "Current CSS: ${{ steps.test-action.outputs.current-css }}"
+          echo "Base CSS: ${{ steps.test-action.outputs.base-css }}"
+          echo "Current JS: ${{ steps.test-action.outputs.current-js }}"
+          echo "Base JS: ${{ steps.test-action.outputs.base-js }}"
