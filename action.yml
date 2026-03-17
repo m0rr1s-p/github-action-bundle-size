@@ -46,8 +46,7 @@ outputs:
     description: The diff js gzipped.
   diff-css-gz:
     description: The diff css gzipped.
-  summary:
-    description: The summary table data.
+
 
 runs:
   using: node24

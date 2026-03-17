@@ -87,4 +87,7 @@ jobs:
           echo "Diff JS(gz): ${{ steps.test-action.outputs.diff-js-gz }}"
           echo "Diff CSS: ${{ steps.test-action.outputs.diff-css }}"
           echo "Diff CSS(gz): ${{ steps.test-action.outputs.diff-css-gz }}"
-          echo  "Summary: ${{ steps.test-action.outputs.summary }}"
+
+      - name: Print summary
+        run: |
+          echo $GITHUB_STEP_SUMMARY
