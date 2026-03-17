@@ -48,6 +48,9 @@ jobs:
   test-action:
     name: GitHub Actions Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout
@@ -91,10 +94,12 @@ jobs:
           echo "Comment: ${{ steps.test-action.outputs.comment }}"
 
       - name: Print PR number
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
           echo "PR number: ${{ github.event.pull_request.number }}"
 
       - name: Find Comment
+        if: ${{ github.event_name == 'pull_request' }}
         uses: peter-evans/find-comment@v3
         id: fc
         with:
@@ -103,6 +108,7 @@ jobs:
           body-includes: Build output
 
       - name: Post Comment
+        if: ${{ github.event_name == 'pull_request' }}
         uses: peter-evans/create-or-update-comment@v5
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
