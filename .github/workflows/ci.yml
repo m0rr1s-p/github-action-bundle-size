@@ -89,3 +89,19 @@ jobs:
           echo "Diff CSS: ${{ steps.test-action.outputs.diff-css }}"
           echo "Diff CSS(gz): ${{ steps.test-action.outputs.diff-css-gz }}"
           echo "Comment: ${{ steps.test-action.outputs.comment }}"
+
+      - name: Find Comment
+        uses: peter-evans/find-comment@v3
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Build output
+
+      - name: Post Comment
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: ${{ steps.test-action.outputs.comment }}
