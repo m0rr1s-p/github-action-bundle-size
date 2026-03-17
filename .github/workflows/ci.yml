@@ -50,6 +50,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v6
+
       - name: Checkout Current
         id: checkout_current
         uses: actions/checkout@v6
