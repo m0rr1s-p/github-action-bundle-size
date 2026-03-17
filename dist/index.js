@@ -28327,9 +28327,11 @@ async function run() {
         const basePath = getInput('base-path');
         const fmt = (bytes) => (bytes / 1048576).toFixed(2) + ' MB';
         const tableData = [
-            { data: 'Asset', header: true },
-            { data: 'Base', header: true },
-            { data: 'PR', header: true }
+            [
+                { data: 'Asset', header: true },
+                { data: 'Base', header: true },
+                { data: 'PR', header: true }
+            ]
         ];
         // Compute current bundle size
         checkBuildDir(currentPath);
@@ -28348,11 +28350,27 @@ async function run() {
         setOutput('base-js-gz', fmt(baseJS.gz));
         setOutput('base-css-gz', fmt(baseCSS.gz));
         // Fill the summary table
-        tableData.push({ data: 'JS(raw)', header: false }, { data: fmt(baseJS.raw), header: false }, { data: fmt(currentJS.raw), header: false });
-        tableData.push({ data: 'JS(gzip)', header: false }, { data: fmt(baseJS.gz), header: false }, { data: fmt(currentJS.gz), header: false });
-        tableData.push({ data: 'CSS(raw)', header: false }, { data: fmt(baseCSS.raw), header: false }, { data: fmt(currentCSS.raw), header: false });
-        tableData.push({ data: 'CSS(gzip)', header: false }, { data: fmt(baseCSS.gz), header: false }, { data: fmt(currentCSS.gz), header: false });
-        summary.addTable([tableData]);
+        tableData.push([
+            { data: 'JS(raw)', header: false },
+            { data: fmt(baseJS.raw), header: false },
+            { data: fmt(currentJS.raw), header: false }
+        ]);
+        tableData.push([
+            { data: 'JS(gzip)', header: false },
+            { data: fmt(baseJS.gz), header: false },
+            { data: fmt(currentJS.gz), header: false }
+        ]);
+        tableData.push([
+            { data: 'CSS(raw)', header: false },
+            { data: fmt(baseCSS.raw), header: false },
+            { data: fmt(currentCSS.raw), header: false }
+        ]);
+        tableData.push([
+            { data: 'CSS(gzip)', header: false },
+            { data: fmt(baseCSS.gz), header: false },
+            { data: fmt(currentCSS.gz), header: false }
+        ]);
+        summary.addTable(tableData);
         summary.write();
     }
     catch (error) {
