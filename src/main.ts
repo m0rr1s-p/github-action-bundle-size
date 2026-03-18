@@ -1,5 +1,5 @@
 import * as core from '@actions/core'
-import { wait } from './wait.js'
+import { measure, checkBuildDir, delta, percent } from './bundle-size.js'
 
 /**
  * The main function for the action.
@@ -8,18 +8,85 @@ import { wait } from './wait.js'
  */
 export async function run(): Promise<void> {
   try {
-    const ms: string = core.getInput('milliseconds')
+    const currentPath: string = core.getInput('current-path') || process.cwd()
+    const basePath: string = core.getInput('base-path')
+    const fmt = (bytes: number) => (bytes / 1048576).toFixed(2) + ' MB'
+    const tableData = [
+      [
+        { data: 'Asset', header: true },
+        { data: 'Base', header: true },
+        { data: 'PR', header: true },
+        { data: 'Delta', header: true }
+      ]
+    ]
 
-    // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-    core.debug(`Waiting ${ms} milliseconds ...`)
+    // Compute current bundle size
+    checkBuildDir(currentPath)
+    const currentJS = measure(currentPath, '.js')
+    const currentCSS = measure(currentPath, '.css')
+    core.setOutput('current-js', fmt(currentJS.raw))
+    core.setOutput('current-css', fmt(currentCSS.raw))
+    core.setOutput('current-js-gz', fmt(currentJS.gz))
+    core.setOutput('current-css-gz', fmt(currentCSS.gz))
 
-    // Log the current timestamp, wait, then log the new timestamp
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
+    // Compute base bundle size
+    checkBuildDir(basePath)
+    const baseJS = measure(basePath, '.js')
+    const baseCSS = measure(basePath, '.css')
+    core.setOutput('base-js', fmt(baseJS.raw))
+    core.setOutput('base-css', fmt(baseCSS.raw))
+    core.setOutput('base-js-gz', fmt(baseJS.gz))
+    core.setOutput('base-css-gz', fmt(baseCSS.gz))
 
-    // Set outputs for other workflow steps to use
-    core.setOutput('time', new Date().toTimeString())
+    core.setOutput('delta-js', delta(baseJS.raw, currentJS.raw))
+    core.setOutput('delta-css', delta(baseCSS.raw, currentCSS.raw))
+    core.setOutput('delta-js-gz', delta(baseJS.gz, currentJS.gz))
+    core.setOutput('delta-css-gz', delta(baseCSS.gz, currentCSS.gz))
+
+    // Fill the summary table
+    tableData.push([
+      { data: 'JS (raw)', header: false },
+      { data: fmt(baseJS.raw), header: false },
+      { data: fmt(currentJS.raw), header: false },
+      {
+        data: `${delta(baseJS.raw, currentJS.raw)}(${percent(baseJS.raw, currentJS.raw)})`,
+        header: false
+      }
+    ])
+    tableData.push([
+      { data: 'JS (gzip)', header: false },
+      { data: fmt(baseJS.gz), header: false },
+      { data: fmt(currentJS.gz), header: false },
+      {
+        data: `${delta(baseJS.gz, currentJS.gz)}(${percent(baseJS.gz, currentJS.gz)})`,
+        header: false
+      }
+    ])
+    tableData.push([
+      { data: 'CSS (raw)', header: false },
+      { data: fmt(baseCSS.raw), header: false },
+      { data: fmt(currentCSS.raw), header: false },
+      {
+        data: `${delta(baseCSS.raw, currentCSS.raw)}(${percent(baseCSS.raw, currentCSS.raw)})`,
+        header: false
+      }
+    ])
+    tableData.push([
+      { data: 'CSS (gzip)', header: false },
+      { data: fmt(baseCSS.gz), header: false },
+      { data: fmt(currentCSS.gz), header: false },
+      {
+        data: `${delta(baseCSS.gz, currentCSS.gz)}(${percent(baseCSS.gz, currentCSS.gz)})`,
+        header: false
+      }
+    ])
+    core.summary.addHeading('Bundle Size')
+    core.summary.addTable(tableData)
+    core.summary.write()
+    if (core.getInput('create-comment') === 'true') {
+      const comment = core.summary.stringify()
+      core.setOutput('comment', comment)
+    }
   } catch (error) {
     // Fail the workflow run if an error occurs
     if (error instanceof Error) core.setFailed(error.message)

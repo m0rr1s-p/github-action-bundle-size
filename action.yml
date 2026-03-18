@@ -1,23 +1,53 @@
-name: The name of your action here
-description: Provide a description here
-author: Your name or organization here
+name: Bundle Size
+description: Compute the bundle size of your project.
+author: m0rr1s-p
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
-  icon: heart
-  color: red
+  icon: package
+  color: yellow
 
 # Define your inputs here.
 inputs:
-  milliseconds:
-    description: Your input description here
-    required: true
-    default: '1000'
+  base-path:
+    description: The base ref to compare against.
+    required: false
+  current-path:
+    description: The current ref to compare against.
+    required: false
+  create-comment:
+    description: The comment to post.
+    required: false
+    default: 'false'
 
 # Define your outputs here.
 outputs:
-  time:
-    description: Your output description here
+  current-js:
+    description: The current js.
+  current-css:
+    description: The current css.
+  current-js-gz:
+    description: The current js gzipped.
+  current-css-gz:
+    description: The current css gzipped.
+  base-js:
+    description: The base js.
+  base-css:
+    description: The base css.
+  base-js-gz:
+    description: The base js gzipped.
+  base-css-gz:
+    description: The base css gzipped.
+  delta-js:
+    description: The diff js.
+  delta-css:
+    description: The diff css.
+  delta-js-gz:
+    description: The diff js gzipped.
+  delta-css-gz:
+    description: The diff css gzipped.
+  comment:
+    description: The comment.
 
 runs:
   using: node24

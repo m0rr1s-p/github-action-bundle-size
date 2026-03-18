@@ -1,8 +1,8 @@
 import * as os from 'os';
-import os__default from 'os';
+import os__default, { EOL } from 'os';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
-import { promises } from 'fs';
+import { promises, constants as constants$5 } from 'fs';
 import 'path';
 import http from 'http';
 import https from 'https';
@@ -21,7 +21,7 @@ import require$$7 from 'node:querystring';
 import require$$8 from 'node:events';
 import require$$0$5 from 'node:diagnostics_channel';
 import require$$5 from 'node:tls';
-import require$$1$2 from 'node:zlib';
+import require$$1$2, { gzipSync } from 'node:zlib';
 import require$$5$1 from 'node:perf_hooks';
 import require$$8$1 from 'node:util/types';
 import require$$1$1 from 'node:worker_threads';
@@ -32,6 +32,8 @@ import require$$1$5 from 'node:dns';
 import require$$5$3 from 'string_decoder';
 import 'child_process';
 import 'timers';
+import { statSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -27859,7 +27861,7 @@ var MediaTypes;
     });
 };
 
-(undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
+var __awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
@@ -27869,6 +27871,268 @@ var MediaTypes;
     });
 };
 const { access, appendFile, writeFile } = promises;
+const SUMMARY_ENV_VAR = 'GITHUB_STEP_SUMMARY';
+class Summary {
+    constructor() {
+        this._buffer = '';
+    }
+    /**
+     * Finds the summary file path from the environment, rejects if env var is not found or file does not exist
+     * Also checks r/w permissions.
+     *
+     * @returns step summary file path
+     */
+    filePath() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this._filePath) {
+                return this._filePath;
+            }
+            const pathFromEnv = process.env[SUMMARY_ENV_VAR];
+            if (!pathFromEnv) {
+                throw new Error(`Unable to find environment variable for $${SUMMARY_ENV_VAR}. Check if your runtime environment supports job summaries.`);
+            }
+            try {
+                yield access(pathFromEnv, constants$5.R_OK | constants$5.W_OK);
+            }
+            catch (_a) {
+                throw new Error(`Unable to access summary file: '${pathFromEnv}'. Check if the file has correct read/write permissions.`);
+            }
+            this._filePath = pathFromEnv;
+            return this._filePath;
+        });
+    }
+    /**
+     * Wraps content in an HTML tag, adding any HTML attributes
+     *
+     * @param {string} tag HTML tag to wrap
+     * @param {string | null} content content within the tag
+     * @param {[attribute: string]: string} attrs key-value list of HTML attributes to add
+     *
+     * @returns {string} content wrapped in HTML element
+     */
+    wrap(tag, content, attrs = {}) {
+        const htmlAttrs = Object.entries(attrs)
+            .map(([key, value]) => ` ${key}="${value}"`)
+            .join('');
+        if (!content) {
+            return `<${tag}${htmlAttrs}>`;
+        }
+        return `<${tag}${htmlAttrs}>${content}</${tag}>`;
+    }
+    /**
+     * Writes text in the buffer to the summary buffer file and empties buffer. Will append by default.
+     *
+     * @param {SummaryWriteOptions} [options] (optional) options for write operation
+     *
+     * @returns {Promise<Summary>} summary instance
+     */
+    write(options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const overwrite = !!(options === null || options === void 0 ? void 0 : options.overwrite);
+            const filePath = yield this.filePath();
+            const writeFunc = overwrite ? writeFile : appendFile;
+            yield writeFunc(filePath, this._buffer, { encoding: 'utf8' });
+            return this.emptyBuffer();
+        });
+    }
+    /**
+     * Clears the summary buffer and wipes the summary file
+     *
+     * @returns {Summary} summary instance
+     */
+    clear() {
+        return __awaiter(this, void 0, void 0, function* () {
+            return this.emptyBuffer().write({ overwrite: true });
+        });
+    }
+    /**
+     * Returns the current summary buffer as a string
+     *
+     * @returns {string} string of summary buffer
+     */
+    stringify() {
+        return this._buffer;
+    }
+    /**
+     * If the summary buffer is empty
+     *
+     * @returns {boolen} true if the buffer is empty
+     */
+    isEmptyBuffer() {
+        return this._buffer.length === 0;
+    }
+    /**
+     * Resets the summary buffer without writing to summary file
+     *
+     * @returns {Summary} summary instance
+     */
+    emptyBuffer() {
+        this._buffer = '';
+        return this;
+    }
+    /**
+     * Adds raw text to the summary buffer
+     *
+     * @param {string} text content to add
+     * @param {boolean} [addEOL=false] (optional) append an EOL to the raw text (default: false)
+     *
+     * @returns {Summary} summary instance
+     */
+    addRaw(text, addEOL = false) {
+        this._buffer += text;
+        return addEOL ? this.addEOL() : this;
+    }
+    /**
+     * Adds the operating system-specific end-of-line marker to the buffer
+     *
+     * @returns {Summary} summary instance
+     */
+    addEOL() {
+        return this.addRaw(EOL);
+    }
+    /**
+     * Adds an HTML codeblock to the summary buffer
+     *
+     * @param {string} code content to render within fenced code block
+     * @param {string} lang (optional) language to syntax highlight code
+     *
+     * @returns {Summary} summary instance
+     */
+    addCodeBlock(code, lang) {
+        const attrs = Object.assign({}, (lang && { lang }));
+        const element = this.wrap('pre', this.wrap('code', code), attrs);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML list to the summary buffer
+     *
+     * @param {string[]} items list of items to render
+     * @param {boolean} [ordered=false] (optional) if the rendered list should be ordered or not (default: false)
+     *
+     * @returns {Summary} summary instance
+     */
+    addList(items, ordered = false) {
+        const tag = ordered ? 'ol' : 'ul';
+        const listItems = items.map(item => this.wrap('li', item)).join('');
+        const element = this.wrap(tag, listItems);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML table to the summary buffer
+     *
+     * @param {SummaryTableCell[]} rows table rows
+     *
+     * @returns {Summary} summary instance
+     */
+    addTable(rows) {
+        const tableBody = rows
+            .map(row => {
+            const cells = row
+                .map(cell => {
+                if (typeof cell === 'string') {
+                    return this.wrap('td', cell);
+                }
+                const { header, data, colspan, rowspan } = cell;
+                const tag = header ? 'th' : 'td';
+                const attrs = Object.assign(Object.assign({}, (colspan && { colspan })), (rowspan && { rowspan }));
+                return this.wrap(tag, data, attrs);
+            })
+                .join('');
+            return this.wrap('tr', cells);
+        })
+            .join('');
+        const element = this.wrap('table', tableBody);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds a collapsable HTML details element to the summary buffer
+     *
+     * @param {string} label text for the closed state
+     * @param {string} content collapsable content
+     *
+     * @returns {Summary} summary instance
+     */
+    addDetails(label, content) {
+        const element = this.wrap('details', this.wrap('summary', label) + content);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML image tag to the summary buffer
+     *
+     * @param {string} src path to the image you to embed
+     * @param {string} alt text description of the image
+     * @param {SummaryImageOptions} options (optional) addition image attributes
+     *
+     * @returns {Summary} summary instance
+     */
+    addImage(src, alt, options) {
+        const { width, height } = options || {};
+        const attrs = Object.assign(Object.assign({}, (width && { width })), (height && { height }));
+        const element = this.wrap('img', null, Object.assign({ src, alt }, attrs));
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML section heading element
+     *
+     * @param {string} text heading text
+     * @param {number | string} [level=1] (optional) the heading level, default: 1
+     *
+     * @returns {Summary} summary instance
+     */
+    addHeading(text, level) {
+        const tag = `h${level}`;
+        const allowedTag = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)
+            ? tag
+            : 'h1';
+        const element = this.wrap(allowedTag, text);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML thematic break (<hr>) to the summary buffer
+     *
+     * @returns {Summary} summary instance
+     */
+    addSeparator() {
+        const element = this.wrap('hr', null);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML line break (<br>) to the summary buffer
+     *
+     * @returns {Summary} summary instance
+     */
+    addBreak() {
+        const element = this.wrap('br', null);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML blockquote to the summary buffer
+     *
+     * @param {string} text quote text
+     * @param {string} cite (optional) citation url
+     *
+     * @returns {Summary} summary instance
+     */
+    addQuote(text, cite) {
+        const attrs = Object.assign({}, (cite && { cite }));
+        const element = this.wrap('blockquote', text, attrs);
+        return this.addRaw(element).addEOL();
+    }
+    /**
+     * Adds an HTML anchor tag to the summary buffer
+     *
+     * @param {string} text link text/content
+     * @param {string} href hyperlink
+     *
+     * @returns {Summary} summary instance
+     */
+    addLink(text, href) {
+        const element = this.wrap('a', text, { href });
+        return this.addRaw(element).addEOL();
+    }
+}
+const _summary = new Summary();
+const summary = _summary;
 
 (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -27992,13 +28256,6 @@ function setFailed(message) {
     error(message);
 }
 /**
- * Writes debug message to user log
- * @param message debug message
- */
-function debug(message) {
-    issueCommand('debug', {}, message);
-}
-/**
  * Adds an error issue
  * @param message error issue message. Errors will be converted to string via toString()
  * @param properties optional properties to add to the annotation.
@@ -28007,18 +28264,95 @@ function error(message, properties = {}) {
     issueCommand('error', toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
 
+// Formatter
+const fmt = (bytes) => (bytes / 1048576).toFixed(2) + ' MB';
 /**
- * Waits for a number of milliseconds.
+ * Recursively collects all files with a specific extension from a given directory.
  *
- * @param milliseconds The number of milliseconds to wait.
- * @returns Resolves with 'done!' after the wait is over.
+ * @param {string} dir - The directory to search for files.
+ * @param {string} ext - The file extension to filter for.
+ * @return {string[]} An array of file paths that match the specified extension.
  */
-async function wait(milliseconds) {
-    return new Promise((resolve) => {
-        if (isNaN(milliseconds))
-            throw new Error('milliseconds is not a number');
-        setTimeout(() => resolve('done!'), milliseconds);
-    });
+function collectFiles(dir, ext) {
+    const results = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+            results.push(...collectFiles(full, ext));
+        }
+        else if (entry.name.endsWith(ext) && !entry.name.endsWith('.map')) {
+            results.push(full);
+        }
+    }
+    return results;
+}
+/**
+ * Measures the raw and gzipped sizes of files with a specified extension in a given directory.
+ *
+ * @param {string} buildDir - The path to the directory containing the files to be measured.
+ * @param {string} ext - The file extension to filter files by for measurement.
+ * @return {{raw: number, gz: number}} An object containing the raw size (in bytes) of all matching files and the size of their gzipped content.
+ */
+function measure(buildDir, ext) {
+    const files = collectFiles(buildDir, ext);
+    const raw = files.reduce((sum, f) => sum + statSync(f).size, 0);
+    const buf = Buffer.concat(files.map((f) => readFileSync(f)));
+    const gz = gzipSync(buf, { level: 9 }).length;
+    return { raw, gz };
+}
+/**
+ * Checks if the specified build directory exists. If the directory does not exist,
+ * it logs an error message and exits the process.
+ *
+ * @param {string} buildDir - The path to the build directory to be checked.
+ * @return {void} This function does not return any value.
+ */
+function checkBuildDir(buildDir) {
+    try {
+        statSync(buildDir);
+    }
+    catch {
+        console.error(`Build directory not found: ${buildDir}\nRun 'pnpm build' first.`);
+        process.exit(1);
+    }
+}
+/**
+ * Calculates the difference between two numbers and formats it as a string.
+ *
+ * @param base The base number to compare against.
+ * @param pr The number being compared to the base.
+ * @return A formatted string representing the difference:
+ *         "--" if the difference is zero, a positive formatted string if
+ *         the difference is greater than zero, and a negative formatted
+ *         string if the difference is less than zero.
+ */
+function delta(base, pr) {
+    const diff = pr - base;
+    if (diff === 0) {
+        return '--';
+    }
+    else if (diff > 0) {
+        return `+${fmt(diff)}`;
+    }
+    else {
+        return `${fmt(diff)}`;
+    }
+}
+/**
+ * Calculates the percentage difference between a base value and a given value.
+ *
+ * @param {number} base - The base value to compare against.
+ * @param {number} pr - The value to calculate the percentage difference for.
+ * @return {string} The percentage difference formatted as a string with a '%' symbol.
+ */
+function percent(base, pr) {
+    const diff = pr - base;
+    if (diff === 0) {
+        return '0%';
+    }
+    else {
+        return `${((diff / base) * 100).toFixed(1)}%`;
+    }
 }
 
 /**
@@ -28028,15 +28362,81 @@ async function wait(milliseconds) {
  */
 async function run() {
     try {
-        const ms = getInput('milliseconds');
-        // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-        debug(`Waiting ${ms} milliseconds ...`);
-        // Log the current timestamp, wait, then log the new timestamp
-        debug(new Date().toTimeString());
-        await wait(parseInt(ms, 10));
-        debug(new Date().toTimeString());
-        // Set outputs for other workflow steps to use
-        setOutput('time', new Date().toTimeString());
+        const currentPath = getInput('current-path') || process.cwd();
+        const basePath = getInput('base-path');
+        const fmt = (bytes) => (bytes / 1048576).toFixed(2) + ' MB';
+        const tableData = [
+            [
+                { data: 'Asset', header: true },
+                { data: 'Base', header: true },
+                { data: 'PR', header: true },
+                { data: 'Delta', header: true }
+            ]
+        ];
+        // Compute current bundle size
+        checkBuildDir(currentPath);
+        const currentJS = measure(currentPath, '.js');
+        const currentCSS = measure(currentPath, '.css');
+        setOutput('current-js', fmt(currentJS.raw));
+        setOutput('current-css', fmt(currentCSS.raw));
+        setOutput('current-js-gz', fmt(currentJS.gz));
+        setOutput('current-css-gz', fmt(currentCSS.gz));
+        // Compute base bundle size
+        checkBuildDir(basePath);
+        const baseJS = measure(basePath, '.js');
+        const baseCSS = measure(basePath, '.css');
+        setOutput('base-js', fmt(baseJS.raw));
+        setOutput('base-css', fmt(baseCSS.raw));
+        setOutput('base-js-gz', fmt(baseJS.gz));
+        setOutput('base-css-gz', fmt(baseCSS.gz));
+        setOutput('delta-js', delta(baseJS.raw, currentJS.raw));
+        setOutput('delta-css', delta(baseCSS.raw, currentCSS.raw));
+        setOutput('delta-js-gz', delta(baseJS.gz, currentJS.gz));
+        setOutput('delta-css-gz', delta(baseCSS.gz, currentCSS.gz));
+        // Fill the summary table
+        tableData.push([
+            { data: 'JS (raw)', header: false },
+            { data: fmt(baseJS.raw), header: false },
+            { data: fmt(currentJS.raw), header: false },
+            {
+                data: `${delta(baseJS.raw, currentJS.raw)}(${percent(baseJS.raw, currentJS.raw)})`,
+                header: false
+            }
+        ]);
+        tableData.push([
+            { data: 'JS (gzip)', header: false },
+            { data: fmt(baseJS.gz), header: false },
+            { data: fmt(currentJS.gz), header: false },
+            {
+                data: `${delta(baseJS.gz, currentJS.gz)}(${percent(baseJS.gz, currentJS.gz)})`,
+                header: false
+            }
+        ]);
+        tableData.push([
+            { data: 'CSS (raw)', header: false },
+            { data: fmt(baseCSS.raw), header: false },
+            { data: fmt(currentCSS.raw), header: false },
+            {
+                data: `${delta(baseCSS.raw, currentCSS.raw)}(${percent(baseCSS.raw, currentCSS.raw)})`,
+                header: false
+            }
+        ]);
+        tableData.push([
+            { data: 'CSS (gzip)', header: false },
+            { data: fmt(baseCSS.gz), header: false },
+            { data: fmt(currentCSS.gz), header: false },
+            {
+                data: `${delta(baseCSS.gz, currentCSS.gz)}(${percent(baseCSS.gz, currentCSS.gz)})`,
+                header: false
+            }
+        ]);
+        summary.addHeading('Bundle Size');
+        summary.addTable(tableData);
+        summary.write();
+        if (getInput('create-comment') === 'true') {
+            const comment = summary.stringify();
+            setOutput('comment', comment);
+        }
     }
     catch (error) {
         // Fail the workflow run if an error occurs

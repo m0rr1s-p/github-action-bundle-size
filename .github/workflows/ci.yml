@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - main
+      - 'releases/*'
 
 permissions:
   contents: read
@@ -47,18 +48,70 @@ jobs:
   test-action:
     name: GitHub Actions Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout
         id: checkout
         uses: actions/checkout@v6
 
+      - name: Checkout Current
+        id: checkout_current
+        uses: actions/checkout@v6
+        with:
+          path: current
+
+      - name: Checkout Base
+        id: checkout_base
+        uses: actions/checkout@v6
+        with:
+          path: base
+
       - name: Test Local Action
         id: test-action
         uses: ./
         with:
-          milliseconds: 2000
+          create-comment: true
+          base-path: base/__tests__/mocks
+          current-path: current/__tests__/mocks
 
       - name: Print Output
-        id: output
-        run: echo "${{ steps.test-action.outputs.time }}"
+        run: |
+          echo "Current CSS: ${{ steps.test-action.outputs.current-css }}"
+          echo "Current CSS(gz): ${{ steps.test-action.outputs.current-css-gz }}"
+          echo "Base CSS: ${{ steps.test-action.outputs.base-css }}"
+          echo "Base CSS(gz): ${{ steps.test-action.outputs.base-css-gz }}"
+          echo "Current JS: ${{ steps.test-action.outputs.current-js }}"
+          echo "Current JS(gz): ${{ steps.test-action.outputs.current-js-gz }}"
+          echo "Base JS: ${{ steps.test-action.outputs.base-js }}"
+          echo "Base JS(gz): ${{ steps.test-action.outputs.base-js-gz }}"
+          echo "Diff JS: ${{ steps.test-action.outputs.delta-js }}"
+          echo "Diff JS(gz): ${{ steps.test-action.outputs.delta-js-gz }}"
+          echo "Diff CSS: ${{ steps.test-action.outputs.delta-css }}"
+          echo "Diff CSS(gz): ${{ steps.test-action.outputs.delta-css-gz }}"
+          echo "Comment: ${{ steps.test-action.outputs.comment }}"
+
+      - name: Print PR number
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          echo "PR number: ${{ github.event.pull_request.number }}"
+
+      - name: Find Comment
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: peter-evans/find-comment@v4
+        id: fc
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Bundle Size
+
+      - name: Post Comment
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: peter-evans/create-or-update-comment@v5
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: ${{ steps.test-action.outputs.comment }}
