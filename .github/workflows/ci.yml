@@ -87,10 +87,10 @@ jobs:
           echo "Current JS(gz): ${{ steps.test-action.outputs.current-js-gz }}"
           echo "Base JS: ${{ steps.test-action.outputs.base-js }}"
           echo "Base JS(gz): ${{ steps.test-action.outputs.base-js-gz }}"
-          echo "Diff JS: ${{ steps.test-action.outputs.diff-js }}"
-          echo "Diff JS(gz): ${{ steps.test-action.outputs.diff-js-gz }}"
-          echo "Diff CSS: ${{ steps.test-action.outputs.diff-css }}"
-          echo "Diff CSS(gz): ${{ steps.test-action.outputs.diff-css-gz }}"
+          echo "Diff JS: ${{ steps.test-action.outputs.delta-js }}"
+          echo "Diff JS(gz): ${{ steps.test-action.outputs.delta-js-gz }}"
+          echo "Diff CSS: ${{ steps.test-action.outputs.delta-css }}"
+          echo "Diff CSS(gz): ${{ steps.test-action.outputs.delta-css-gz }}"
           echo "Comment: ${{ steps.test-action.outputs.comment }}"
 
       - name: Print PR number
