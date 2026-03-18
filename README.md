@@ -5,19 +5,21 @@
 ![Check dist/](https://github.com/m0rr1s-p/github-action-bundle-size/actions/workflows/check-dist.yml/badge.svg)
 ![Coverage](./badges/coverage.svg)
 
-Use this action to check bundle size. It provides insights into the size of your JavaScript bundles, helping you
-optimize performance and reduce load times.
+Use this action to check bundle size. It provides insights into the size of your
+JavaScript bundles, helping you optimize performance and reduce load times.
 
 ## Inputs
+
 | Name             | Description                             | Required | Default |
-|------------------|-----------------------------------------|----------|---------|
+| ---------------- | --------------------------------------- | -------- | ------- |
 | `base-path`      | The path to the base branch's bundle    | true     | none    |
 | `current-path`   | The path to the current branch's bundle | true     | none    |
 | `create-comment` | Whether to create a comment on the PR   | false    | false   |
 
 ## Outputs
+
 | Name             | Description                                                       |
-|------------------|-------------------------------------------------------------------|
+| ---------------- | ----------------------------------------------------------------- |
 | `current-js`     | The size of the current .js files                                 |
 | `current-js-gz`  | The size of the current gzipped .js files                         |
 | `current-css`    | The size of the current .css files                                |
@@ -29,19 +31,20 @@ optimize performance and reduce load times.
 | `delta-js`       | Difference in size of .js files between the two branches          |
 | `delta-css`      | Difference in size of .css files between the two branches         |
 | `delta-js-gz`    | Difference in gzipped size of .js files between the two branches  |
-| `delta-css-gz`   | Difference in gzipped size of .css files between the two branches | 
+| `delta-css-gz`   | Difference in gzipped size of .css files between the two branches |
 | `comment`        | The comment to post                                               |
 
-
 ## Usage
-Create a workflow and check out the two branches you want to compare. This action will calculate the size difference
-between the two branches, allowing you to identify any significant changes in bundle size.
+
+Create a workflow and check out the two branches you want to compare. This
+action will calculate the size difference between the two branches, allowing you
+to identify any significant changes in bundle size.
 
 ```yaml
 name: Bundle Size
 on:
   pull_request:
-     
+
 jobs:
   size-check:
     runs-on: ubuntu-latest
@@ -52,14 +55,14 @@ jobs:
       - name: Checkout Base Branch
         uses: actions/checkout@v6
         with:
-           ref: main
-           path: base
-   
+          ref: main
+          path: base
+
       - name: Checkout PR Branch
         uses: actions/checkout@v6
         with:
-           ref: ${{ github.head_ref }}
-           path: current
+          ref: ${{ github.head_ref }}
+          path: current
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -72,18 +75,18 @@ jobs:
           node-version-file: current/app/src/main/svelte/.node-version
           cache: pnpm
           cache-dependency-path: current/app/src/main/svelte/pnpm-lock.yaml
-      
+
       - name: Build PR branch
         working-directory: current/app/src/main/svelte
         run: |
-           pnpm install --frozen-lockfile
-           pnpm build
-           
+          pnpm install --frozen-lockfile
+          pnpm build
+
       - name: Build Base branch
         working-directory: base/app/src/main/svelte
         run: |
-           pnpm install --frozen-lockfile
-           pnpm build
+          pnpm install --frozen-lockfile
+          pnpm build
 
       - name: Bundle Size Check
         uses: m0rr1s-p/github-action-bundle-size@releases/v1
@@ -97,17 +100,16 @@ jobs:
         uses: peter-evans/find-comment@v4
         id: fc
         with:
-           issue-number: ${{ github.event.pull_request.number }}
-           comment-author: 'github-actions[bot]'
-           body-includes: Bundle Size
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Bundle Size
 
       - name: Post Comment
         if: ${{ github.event_name == 'pull_request' }}
         uses: peter-evans/create-or-update-comment@v5
         with:
-           comment-id: ${{ steps.fc.outputs.comment-id }}
-           issue-number: ${{ github.event.pull_request.number }}
-           edit-mode: replace
-           body: ${{ steps.size-check.outputs.comment }}
-
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          edit-mode: replace
+          body: ${{ steps.size-check.outputs.comment }}
 ```
