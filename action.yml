@@ -1,11 +1,11 @@
-name: The name of your action here
-description: Provide a description here
-author: Your name or organization here
+name: Bundle Size
+description: Compute the bundle size of your project.
+author: m0rr1s-p
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
-  icon: heart
-  color: red
+  icon: package
+  color: yellow
 
 # Define your inputs here.
 inputs:
@@ -38,13 +38,13 @@ outputs:
     description: The base js gzipped.
   base-css-gz:
     description: The base css gzipped.
-  diff-js:
+  delta-js:
     description: The diff js.
-  diff-css:
+  delta-css:
     description: The diff css.
-  diff-js-gz:
+  delta-js-gz:
     description: The diff js gzipped.
-  diff-css-gz:
+  delta-css-gz:
     description: The diff css gzipped.
   comment:
     description: The comment.
